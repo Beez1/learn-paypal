@@ -23,7 +23,7 @@ mongoose.connect(mongoUri)
   })
   .catch(err => {
     console.error('❌ DB connection failed:', err.message);
-    console.log('💡 Running without database - using in-memory storage');
+    console.log('Running without database - using in-memory storage');
     console.log('   To enable MongoDB: start MongoDB locally or update MONGODB_URI in .env');
   });
 
@@ -241,6 +241,99 @@ app.post('/api/capture-order/:orderId', async (req, res) => {
   } catch (error) {
     console.error('Capture order error:', error.message);
     res.status(500).json({ error: 'Failed to capture order' });
+  }
+});
+
+// 💰 Refund PayPal payment
+app.post('/api/refund-order/:orderId', async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    let order;
+    
+    // Find the order in database or memory
+    if (mongoConnected) {
+      order = await Order.findById(orderId);
+    } else {
+      // For in-memory storage, we'll need to track orders differently
+      return res.status(400).json({ error: 'Refunds require database connection. Please connect MongoDB.' });
+    }
+    
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+    
+    if (order.status === 'REFUNDED') {
+      return res.status(400).json({ error: 'Order has already been refunded' });
+    }
+    
+    // Get PayPal access token
+    const token = await getAccessToken();
+    
+    // Find the capture ID from the original transaction
+    const captureId = order.transactionId;
+    
+    if (!captureId) {
+      return res.status(400).json({ error: 'No capture ID found for this order' });
+    }
+    
+    // Process refund with PayPal
+    const refundResponse = await axios.post(
+      `${BASE}/v2/payments/captures/${captureId}/refund`,
+      {
+        amount: {
+          currency_code: order.currency || 'USD',
+          value: order.amount.toFixed(2)
+        },
+        note_to_payer: `Refund for ${order.item}`
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        }
+      }
+    );
+    
+    const refundData = refundResponse.data;
+    
+    // Update order status in database
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        status: 'REFUNDED',
+        refundId: refundData.id,
+        refundAmount: parseFloat(refundData.amount.value),
+        refundDate: new Date(),
+        refundStatus: refundData.status,
+        orderCaption: `REFUNDED: ${order.orderCaption}`,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+    
+    console.log(`💰 Refund processed for order ${orderId}: ${refundData.id}`);
+    res.json({
+      success: true,
+      message: 'Refund processed successfully',
+      order: updatedOrder,
+      refundId: refundData.id,
+      refundAmount: refundData.amount.value
+    });
+    
+  } catch (error) {
+    console.error('Refund error:', error.response?.data || error.message);
+    
+    // Handle specific PayPal errors
+    if (error.response?.status === 422) {
+      return res.status(400).json({ 
+        error: 'Refund not possible - payment may have already been refunded or is not eligible for refund' 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to process refund',
+      details: error.response?.data?.message || error.message
+    });
   }
 });
 

@@ -12,6 +12,10 @@ const orderSchema = new mongoose.Schema({
   transactionId: String,
   paymentMethod: String,
   currency: String,
+  refundId: String,
+  refundAmount: Number,
+  refundDate: Date,
+  refundStatus: String,
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });

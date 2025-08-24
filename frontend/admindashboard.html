@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard - Deli Shop</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="admindashboard.js" defer></script>
+</head>
+<body>
+  <div class="spanner-icon">🔧</div>
+  
+  <div class="admin-container">
+    <div class="admin-header">
+      <a href="index.html" class="back-btn">← Back to Shop</a>
+      <h1>Admin Dashboard<span class="emoji">📊</span></h1>
+      <p class="subtitle">Manage your deli shop orders and analytics</p>
+    </div>
+
+    <div id="loading" class="loading hidden">Loading dashboard data...</div>
+    
+    <div class="admin-stats">
+      <div class="stat-card">
+        <div class="stat-number" id="total-orders">0</div>
+        <div class="stat-label">Total Orders</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="total-revenue">$0.00</div>
+        <div class="stat-label">Total Revenue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="avg-order">$0.00</div>
+        <div class="stat-label">Average Order</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" id="today-orders">0</div>
+        <div class="stat-label">Today's Orders</div>
+      </div>
+    </div>
+
+    <div class="orders-section">
+      <h2 class="section-title">Recent Orders</h2>
+      <button class="refresh-btn" onclick="loadDashboardData()">Refresh Data</button>
+      
+      <div id="orders-container">
+        <div class="no-orders">Loading orders...</div>
+      </div>
+    </div>
+  </div>
+
+
+</body>
+</html>

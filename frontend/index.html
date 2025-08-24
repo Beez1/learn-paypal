@@ -6,8 +6,10 @@
   <title>Deli Shop - Fresh & Delicious</title>
   <link rel="stylesheet" href="styles.css">
   <script src="https://www.paypal.com/sdk/js?client-id=AYoZx-D_-UbqqLkxQ6Q0LfNID8oSbmVaAgke1URKD3pXKiRP9S5hG2eRcuW5wC1mFoB8pC_ExnKaG4CP&currency=USD"></script>
+  <script src="index.js" defer></script>
 </head>
 <body>
+  <a href="admindashboard.html" class="spanner-icon">🔧</a>
   <div class="container">
     <div class="header">
       <h1>Welcome to Deli Shop<span class="emoji">🥪</span></h1>
@@ -19,19 +21,52 @@
     <div id="products" class="products-grid"></div>
     
     <div id="paypal-container" class="paypal-container hidden">
-      <h3>Complete Your Order</h3>
+      <h3>🛒 Complete Your Order</h3>
+      
       <div id="selected-item" class="selected-item">
-        <div class="selected-item-name"></div>
-        <div class="selected-item-price"></div>
+        <div class="selected-item-header">
+          <div class="selected-item-icon">🥪</div>
+          <div class="selected-item-info">
+            <div class="selected-item-name"></div>
+            <div class="selected-item-price"></div>
+          </div>
+        </div>
       </div>
+
+      <div class="checkout-steps">
+        <div class="checkout-step active">
+          <div class="checkout-step-icon">1</div>
+          <span>Select Item</span>
+        </div>
+        <div class="checkout-step">
+          <div class="checkout-step-icon">2</div>
+          <span>Pay Securely</span>
+        </div>
+        <div class="checkout-step">
+          <div class="checkout-step-icon">✓</div>
+          <span>Enjoy!</span>
+        </div>
+      </div>
+      
       <div id="paypal-button-container"></div>
+      
+      <div class="security-badges">
+        <div class="security-badge">
+          <span class="security-badge-icon">🔒</span>
+          <span>SSL Secured</span>
+        </div>
+        <div class="security-badge">
+          <span class="security-badge-icon">🛡️</span>
+          <span>PayPal Protected</span>
+        </div>
+        <div class="security-badge">
+          <span class="security-badge-icon">⚡</span>
+          <span>Instant Processing</span>
+        </div>
+      </div>
     </div>
 
-    <div class="footer">
-      <p>Made with <span class="heart">❤️</span> for food lovers</p>
-      <p>Secure payments powered by PayPal</p>
-    </div>
-  </div>
+  
 
   <!-- Success Modal -->
   <div id="success-modal" class="modal-overlay hidden">
@@ -90,218 +125,6 @@
     </div>
   </div>
 
-  <script>
-    let selectedItemId = null;
-    let selectedProduct = null;
 
-    async function loadProducts() {
-      try {
-        showLoading(true);
-        const res = await fetch('/api/products');
-        const products = await res.json();
-        const container = document.getElementById('products');
-        
-        container.innerHTML = '';
-        
-        products.forEach(product => {
-          const productCard = document.createElement('div');
-          productCard.className = 'product-card fade-in';
-          productCard.innerHTML = `
-            <div class="product-name">${product.name}</div>
-            <div class="product-price">$${product.price.toFixed(2)}</div>
-            <div class="product-description">${product.description}</div>
-            <button class="select-btn" onclick="selectProduct('${product._id}', '${product.name}', ${product.price})">
-              Select Item
-            </button>
-          `;
-          container.appendChild(productCard);
-        });
-        
-        showLoading(false);
-      } catch (error) {
-        showError('Failed to load products. Please refresh the page.');
-        showLoading(false);
-      }
-    }
-
-    function selectProduct(id, name, price) {
-      selectedItemId = id;
-      selectedProduct = { name, price };
-      
-      // Update UI to show selection
-      document.querySelectorAll('.product-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      event.target.closest('.product-card').classList.add('selected');
-      
-      // Show PayPal container
-      const paypalContainer = document.getElementById('paypal-container');
-      paypalContainer.classList.remove('hidden');
-      
-      // Update selected item display
-      document.querySelector('.selected-item-name').textContent = name;
-      document.querySelector('.selected-item-price').textContent = `$${price.toFixed(2)}`;
-      
-      // Clear and render PayPal button
-      document.getElementById('paypal-button-container').innerHTML = '';
-      renderPayPalButton();
-      
-      // Smooth scroll to PayPal section
-      paypalContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    function renderPayPalButton() {
-      paypal.Buttons({
-        style: {
-          color: 'blue',
-          shape: 'pill',
-          label: 'pay',
-          height: 50
-        },
-        createOrder: async () => {
-          try {
-            const res = await fetch('/api/create-order', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ itemId: selectedItemId })
-            });
-            const data = await res.json();
-            return data.id;
-          } catch (error) {
-            showError('Failed to create order. Please try again.');
-            throw error;
-          }
-        },
-        onApprove: async (data) => {
-          try {
-            showLoading(true);
-            const res = await fetch(`/api/capture-order/${data.orderID}`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ itemId: selectedItemId })
-            });
-            const details = await res.json();
-            showLoading(false);
-            
-            // Show success modal instead of alert
-            showSuccessModal(details);
-            
-            // Reset selection after modal is closed
-            setTimeout(() => {
-              resetSelection();
-            }, 1000);
-          } catch (error) {
-            showLoading(false);
-            showError('Payment processing failed. Please contact support.');
-          }
-        },
-        onError: err => {
-          console.error('PayPal Error:', err);
-          showError("❌ Payment failed. Please try again.");
-        },
-        onCancel: () => {
-          showError("Payment cancelled. Feel free to try again!");
-        }
-      }).render('#paypal-button-container');
-    }
-
-    function showLoading(show) {
-      const loading = document.getElementById('loading');
-      if (show) {
-        loading.classList.remove('hidden');
-      } else {
-        loading.classList.add('hidden');
-      }
-    }
-
-    function showSuccess(message) {
-      removeMessages();
-      const successDiv = document.createElement('div');
-      successDiv.className = 'success-message';
-      successDiv.innerHTML = `<strong>${message}</strong>`;
-      document.querySelector('.container').insertBefore(successDiv, document.getElementById('products'));
-      
-      setTimeout(() => {
-        successDiv.remove();
-      }, 5000);
-    }
-
-    function showError(message) {
-      removeMessages();
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'error-message';
-      errorDiv.innerHTML = `<strong>${message}</strong>`;
-      document.querySelector('.container').insertBefore(errorDiv, document.getElementById('products'));
-      
-      setTimeout(() => {
-        errorDiv.remove();
-      }, 5000);
-    }
-
-    function removeMessages() {
-      document.querySelectorAll('.success-message, .error-message').forEach(msg => msg.remove());
-    }
-
-    function resetSelection() {
-      selectedItemId = null;
-      selectedProduct = null;
-      document.querySelectorAll('.product-card').forEach(card => {
-        card.classList.remove('selected');
-      });
-      document.getElementById('paypal-container').classList.add('hidden');
-      removeMessages();
-    }
-
-    // Success Modal Functions
-    function showSuccessModal(orderDetails) {
-      const itemName = orderDetails.item || 'N/A';
-      const customerName = orderDetails.buyerName || 'Customer';
-      
-      // Update dynamic content to feature the item name
-      document.getElementById('modal-dynamic-title').textContent = `${itemName} Order Complete!`;
-      document.getElementById('modal-dynamic-message').textContent = 
-        `Thank you ${customerName}! Your ${itemName} has been successfully ordered and paid for.`;
-      
-      // Populate modal with order details
-      document.getElementById('modal-order-id').textContent = orderDetails.paypalOrderId || orderDetails._id || 'N/A';
-      document.getElementById('modal-item-name').textContent = itemName;
-      document.getElementById('modal-featured-item').textContent = itemName;
-      document.getElementById('modal-amount').textContent = `$${orderDetails.amount || '0.00'}`;
-      document.getElementById('modal-customer-name').textContent = customerName;
-      document.getElementById('modal-transaction-id').textContent = orderDetails.transactionId || 'N/A';
-      document.getElementById('modal-status').textContent = orderDetails.status || 'COMPLETED';
-      
-      // Show the modal
-      document.getElementById('success-modal').classList.remove('hidden');
-      
-      // Prevent body scrolling
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeSuccessModal() {
-      document.getElementById('success-modal').classList.add('hidden');
-      document.body.style.overflow = 'auto';
-      resetSelection();
-    }
-
-    // Close modal when clicking overlay
-    document.getElementById('success-modal').addEventListener('click', (e) => {
-      if (e.target.classList.contains('modal-overlay')) {
-        closeSuccessModal();
-      }
-    });
-
-    // Close modal with Escape key
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeSuccessModal();
-      }
-    });
-
-    // Initialize the application
-    document.addEventListener('DOMContentLoaded', () => {
-      loadProducts();
-    });
-  </script>
 </body>
 </html>
