@@ -144,16 +144,3 @@ The application is fully responsive and optimized for:
 4. Test thoroughly
 5. Submit a pull request
 
-## 📄 License
-
-This project is licensed under the ISC License.
-
-## 🙏 Acknowledgments
-
-- PayPal for their comprehensive payment API
-- MongoDB for the flexible database solution
-- The open-source community for inspiration and tools
-
----
-
-**Made with ❤️ for food lovers and developers**
